@@ -1,19 +1,16 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
+using PdfSharp.Pdf.Advanced;
 using SharpShell.Attributes;
 using SharpShell.SharpContextMenu;
 
 namespace CountLinesExtension
 {
-    /// <summary>
-    /// The CountLinesExtensions is an example shell context menu extension,
-    /// implemented with SharpShell. It adds the command 'Count Lines' to text
-    /// files.
-    /// </summary>
     [ComVisible(true)]
-    [COMServerAssociation(AssociationType.ClassOfExtension, ".txt")]
+    [Guid("C8440364-6AA7-4A32-A8FA-9E498C24C6C9")]
+    [COMServerAssociation(AssociationType.AllFiles)]
     public class CountLinesExtension : SharpContextMenu
     {
         /// <summary>
@@ -24,8 +21,8 @@ namespace CountLinesExtension
         /// </returns>
         protected override bool CanShowMenu()
         {
-            //  We always show the menu.
-            return true;
+            //  We only show the menu if any selected file ends with .xml.
+            return SelectedItemPaths?.Any(path => path.EndsWith(".xml")) ?? false;
         }
 
         /// <summary>
@@ -40,17 +37,17 @@ namespace CountLinesExtension
             var menu = new ContextMenuStrip();
 
             //  Create a 'count lines' item.
-            var itemCountLines = new ToolStripMenuItem
+            var toolStripMenuItem = new ToolStripMenuItem
             {
                 Text = "Konvertuj XML u PDF..."
                 // Image = Properties.Resources.convert_tiny
             };
 
             //  When we click, we'll count the lines.
-            itemCountLines.Click += (sender, args) => ConvertXMLtoPDF();
+            toolStripMenuItem.Click += (sender, args) => ConvertXMLtoPDF();
 
             //  Add the item to the context menu.
-            menu.Items.Add(itemCountLines);
+            menu.Items.Add(toolStripMenuItem);
 
             //  Return the menu.
             return menu;
@@ -63,9 +60,19 @@ namespace CountLinesExtension
         {
             foreach (var filePath in SelectedItemPaths)
             {
-                var fileNameNoExt = Path.GetFileName(filePath).Split('.')[0];
-                var pdfContent = PdfCreator.FindPdfContent(filePath, "env:DocumentPdf");
-                PdfCreator.OpenPdf(fileNameNoExt, pdfContent);
+                try
+                {
+                    var fileNameNoExt = Path.GetFileName(filePath).Split('.')[0];
+                    var pdfContent = PdfCreator.FindPdfContent(filePath, "env:DocumentPdf");
+
+                    // TODO: PdfCreator.OpenPdf(fileNameNoExt, pdfContent);
+
+                    Log($"Converted XML to PDF. File: [{filePath}] | Content (Length): [{pdfContent?.Length}]");
+                }
+                catch (System.Exception exception)
+                {
+                    LogError($"Error Converting XML to PDF. File: [{filePath}]", exception);
+                }
             }
         }
     }
